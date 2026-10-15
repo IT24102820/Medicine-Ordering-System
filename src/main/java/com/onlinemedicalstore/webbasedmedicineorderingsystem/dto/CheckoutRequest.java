@@ -1,0 +1,30 @@
+package com.onlinemedicalstore.webbasedmedicineorderingsystem.dto;
+
+import java.util.Map;
+
+/**
+ * Data Transfer Object for handling the checkout request payload,
+ * which includes cart items and mock payment details.
+ */
+public class CheckoutRequest {
+    private Map<Long, Integer> cartItems;
+    private Map<String, String> paymentDetails;
+
+    // Getters and Setters
+    public Map<Long, Integer> getCartItems() {
+        return cartItems;
+    }
+
+    public void setCartItems(Map<Long, Integer> cartItems) {
+        this.cartItems = cartItems;
+    }
+
+    public Map<String, String> getPaymentDetails() {
+        return paymentDetails;
+    }
+
+    public void setPaymentDetails(Map<String, String> paymentDetails) {
+        this.paymentDetails = paymentDetails;
+    }
+}
+

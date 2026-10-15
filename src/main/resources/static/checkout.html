@@ -1,0 +1,156 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout - PharmaGo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/pharmago.css">
+</head>
+<body class="bg-slate-100">
+<nav class="bg-white shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+            <div class="flex">
+                <div class="flex-shrink-0 flex items-center font-bold text-xl text-blue-600">PharmaGo</div>
+                <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+                    <a href="/store.html" class="border-transparent text-gray-500 hover:border-gray-300 inline-flex items-center px-1 pt-1 border-b-2 text-sm">Store</a>
+                    <a href="/my_orders.html" class="border-transparent text-gray-500 hover:border-gray-300 inline-flex items-center px-1 pt-1 border-b-2 text-sm">My Orders</a>
+                    <a href="/profile.html" class="border-transparent text-gray-500 hover:border-gray-300 inline-flex items-center px-1 pt-1 border-b-2 text-sm">My Profile</a>
+                </div>
+            </div>
+            <div class="flex items-center">
+                <form action="/logout" method="post">
+                    <button type="submit" class="px-3 py-1 bg-red-500 text-white text-sm rounded-md">Logout</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="container max-w-4xl mx-auto p-4 sm:p-8">
+    <header class="text-center mb-10">
+        <h1 class="text-4xl font-bold text-slate-700">Checkout</h1>
+        <p class="text-slate-500 mt-2">Please review your order and complete the payment.</p>
+    </header>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- Order Summary -->
+        <div class="bg-white p-6 rounded-xl shadow-md">
+            <h2 class="text-2xl font-semibold text-slate-700 mb-5">Order Summary</h2>
+            <div id="order-summary-items" class="space-y-3 mb-4"></div>
+            <div class="border-t pt-4">
+                <div class="flex justify-between font-bold text-lg text-slate-800">
+                    <span>Total</span>
+                    <span id="order-total">Rs.0.00</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fake Payment Form -->
+        <div class="bg-white p-6 rounded-xl shadow-md">
+            <h2 class="text-2xl font-semibold text-slate-700 mb-5">Payment Details</h2>
+            <form id="payment-form" class="space-y-4">
+                <div>
+                    <label for="cardNumber" class="block text-sm font-medium">Card Number</label>
+                    <input type="text" id="cardNumber" required class="w-full p-2 border rounded-md mt-1" placeholder="xxxx xxxx xxxx xxxx">
+                </div>
+                <div>
+                    <label for="cardName" class="block text-sm font-medium">Name on Card</label>
+                    <input type="text" id="cardName" required class="w-full p-2 border rounded-md mt-1">
+                </div>
+                <div class="flex space-x-4">
+                    <div class="flex-1">
+                        <label for="expiryDate" class="block text-sm font-medium">Expiry (MM/YY)</label>
+                        <input type="text" id="expiryDate" required class="w-full p-2 border rounded-md mt-1" placeholder="MM/YY">
+                    </div>
+                    <div class="flex-1">
+                        <label for="cvv" class="block text-sm font-medium">CVV</label>
+                        <input type="text" id="cvv" required class="w-full p-2 border rounded-md mt-1" placeholder="123">
+                    </div>
+                </div>
+                <div id="payment-message" class="text-sm"></div>
+                <button type="submit" id="pay-btn" class="w-full mt-4 py-3 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700">Pay Now</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', async () => {
+        const cartData = sessionStorage.getItem('cart');
+        if (!cartData) {
+            alert("Your cart is empty or has expired. Redirecting to store.");
+            window.location.href = '/store.html';
+            return;
+        }
+
+        const cart = JSON.parse(cartData);
+        const summaryItems = document.getElementById('order-summary-items');
+        const orderTotalEl = document.getElementById('order-total');
+        const paymentForm = document.getElementById('payment-form');
+        const payBtn = document.getElementById('pay-btn');
+        const paymentMessage = document.getElementById('payment-message');
+
+        let total = 0;
+
+        const response = await fetch('/api/inventory');
+        const allProducts = await response.json();
+
+        summaryItems.innerHTML = '';
+        for (const productId in cart) {
+            const product = allProducts.find(p => p.id == productId);
+            const quantity = cart[productId];
+            if (product) {
+                total += product.price * quantity;
+                const itemEl = document.createElement('div');
+                itemEl.className = 'flex justify-between text-sm';
+                itemEl.innerHTML = `
+                    <span>${product.name} (x${quantity})</span>
+                    <span class="font-medium">Rs.${(product.price * quantity).toFixed(2)}</span>`;
+                summaryItems.appendChild(itemEl);
+            }
+        }
+        orderTotalEl.textContent = `Rs.${total.toFixed(2)}`;
+
+        paymentForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            payBtn.disabled = true;
+            payBtn.textContent = 'Processing...';
+
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            // The payload is now just the cart object itself.
+            const payload = cart;
+
+            try {
+                const orderResponse = await fetch('/api/orders', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+
+                if (!orderResponse.ok) {
+                    throw new Error(await orderResponse.text());
+                }
+
+                paymentMessage.textContent = 'Payment successful! Your order has been placed. Redirecting...';
+                paymentMessage.className = 'text-green-500';
+                sessionStorage.removeItem('cart');
+
+                setTimeout(() => {
+                    window.location.href = '/my_orders.html';
+                }, 2000);
+
+            } catch (error) {
+                paymentMessage.textContent = `Error: ${error.message}`;
+                paymentMessage.className = 'text-red-500';
+                payBtn.disabled = false;
+                payBtn.textContent = 'Pay Now';
+            }
+        });
+    });
+</script>
+
+</body>
+</html>

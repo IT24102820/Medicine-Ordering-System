@@ -1,0 +1,13 @@
+package com.onlinemedicalstore.webbasedmedicineorderingsystem;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
+
+@SpringBootApplication
+@EnableScheduling // Enable the scheduled tasks like checking pending payments
+public class WebBasedMedicineOrderingSystemApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(WebBasedMedicineOrderingSystemApplication.class, args);
+    }
+}

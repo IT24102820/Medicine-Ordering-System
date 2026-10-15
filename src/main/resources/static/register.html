@@ -1,0 +1,82 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register - PharmaGo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/pharmago.css">
+</head>
+<body class="bg-slate-100 flex items-center justify-center min-h-screen py-12">
+
+<div class="w-full max-w-md bg-white p-8 rounded-xl shadow-lg">
+  <div class="text-center mb-8">
+    <h1 class="text-3xl font-bold text-blue-600">Create Account</h1>
+    <p class="text-slate-500">Join PharmaGo today!</p>
+  </div>
+  <form id="register-form" class="space-y-6">
+    <div>
+      <label for="username" class="block text-sm font-medium text-slate-600 mb-1">Username</label>
+      <input type="text" id="username" required class="w-full p-3 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 transition">
+    </div>
+    <div>
+      <label for="email" class="block text-sm font-medium text-slate-600 mb-1">Email</label>
+      <input type="email" id="email" required class="w-full p-3 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 transition">
+    </div>
+    <div>
+      <label for="password" class="block text-sm font-medium text-slate-600 mb-1">Password</label>
+      <input type="password" id="password" required class="w-full p-3 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 transition">
+    </div>
+    <div>
+      <label for="role" class="block text-sm font-medium text-slate-600 mb-1">Account Type</label>
+      <select id="role" class="w-full p-3 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 transition">
+        <option value="ROLE_CUSTOMER" selected>Customer</option>
+        <option value="ROLE_INVENTORY_MANAGER">Inventory Manager</option>
+        <option value="ROLE_FINANCE_OFFICER">Finance Officer</option>
+        <option value="ROLE_GENERAL_PHYSICIAN">General Physician</option>
+        <option value="ROLE_PHARMACY_ASSISTANT">Pharmacy Assistant</option>
+        <option value="ROLE_DELIVERY_COORDINATOR">Delivery Coordinator</option>
+        <option value="ROLE_SUPER_ADMIN">Super Admin</option>
+      </select>
+    </div>
+    <div id="message" class="text-sm text-center"></div>
+    <div>
+      <button type="submit" class="w-full py-3 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition duration-200">Register</button>
+    </div>
+  </form>
+  <p class="text-center text-sm text-slate-500 mt-6">
+    Already have an account? <a href="/login.html" class="font-medium text-blue-600 hover:underline">Login here</a>.
+  </p>
+</div>
+
+<script>
+  document.getElementById('register-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const messageEl = document.getElementById('message');
+    const payload = {
+      username: document.getElementById('username').value,
+      email: document.getElementById('email').value,
+      password: document.getElementById('password').value,
+      role: document.getElementById('role').value
+    };
+
+    const response = await fetch('/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (response.ok) {
+      messageEl.textContent = 'Registration successful! Redirecting to login...';
+      messageEl.className = 'text-green-500 text-sm text-center';
+      setTimeout(() => { window.location.href = '/login.html'; }, 2000);
+    } else {
+      const errorText = await response.text();
+      messageEl.textContent = `Error: ${errorText}`;
+      messageEl.className = 'text-red-500 text-sm text-center';
+    }
+  });
+</script>
+
+</body>
+</html>

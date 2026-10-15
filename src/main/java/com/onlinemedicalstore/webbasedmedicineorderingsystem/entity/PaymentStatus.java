@@ -1,0 +1,8 @@
+package com.onlinemedicalstore.webbasedmedicineorderingsystem.entity;
+
+public enum PaymentStatus {
+    PENDING,
+    SUCCESS,
+    FAILED
+}
+

@@ -1,0 +1,46 @@
+package com.onlinemedicalstore.webbasedmedicineorderingsystem.controller;
+
+import com.onlinemedicalstore.webbasedmedicineorderingsystem.dto.PaymentDTO;
+import com.onlinemedicalstore.webbasedmedicineorderingsystem.dto.ReviewDTO;
+import com.onlinemedicalstore.webbasedmedicineorderingsystem.entity.Payment;
+import com.onlinemedicalstore.webbasedmedicineorderingsystem.entity.Review;
+import com.onlinemedicalstore.webbasedmedicineorderingsystem.service.PaymentService;
+import com.onlinemedicalstore.webbasedmedicineorderingsystem.service.ReviewService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/finance")
+@CrossOrigin(origins = "http://localhost:8080")
+public class FinanceController {
+
+    @Autowired
+    private PaymentService paymentService;
+
+    @Autowired
+    private ReviewService reviewService;
+
+    @GetMapping("/payments")
+    public List<PaymentDTO> getAllPayments() {
+        return paymentService.getAllPaymentsAsDTO();
+    }
+
+    @PutMapping("/payments/{id}/success")
+    public ResponseEntity<Payment> markAsSuccess(@PathVariable Long id) {
+        return ResponseEntity.ok(paymentService.markPaymentAsSuccess(id));
+    }
+
+    @GetMapping("/reviews")
+    public List<ReviewDTO> getAllReviews() {
+        return reviewService.getAllReviewsAsDTO();
+    }
+
+    @PutMapping("/reviews/{id}")
+    public ResponseEntity<Review> updateReview(@PathVariable Long id, @RequestBody Map<String, Boolean> payload) {
+        return ResponseEntity.ok(reviewService.updateReviewApproval(id, payload.get("isApproved")));
+    }
+}

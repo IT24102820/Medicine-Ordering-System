@@ -1,0 +1,308 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical Store</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/pharmago.css">
+</head>
+<body class="bg-slate-100">
+
+<nav class="bg-white shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+            <div class="flex">
+                <div class="flex-shrink-0 flex items-center font-bold text-xl text-blue-600">
+                    PharmaGo
+                </div>
+                <div class="hidden sm:ml-6 sm:flex sm:space-x-8">
+                    <a href="/store.html" class="border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Store</a>
+                    <a href="/my_orders.html" id="my-orders-link" class="hidden border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">My Orders</a>
+                    <a href="/profile.html" id="my-profile-link" class="hidden border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">My Profile</a>
+                    <a href="/prescriptions.html" id="prescriptions-link" class="hidden border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Prescriptions</a>
+                </div>
+            </div>
+            <div class="flex items-center">
+                <a href="/login.html" id="login-link" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Login</a>
+                <form id="logout-form" action="/logout" method="post" class="hidden">
+                    <button type="submit" class="ml-4 px-3 py-1 bg-red-500 text-white text-sm font-semibold rounded-md hover:bg-red-600 transition">Logout</button>
+                </form>
+                <span id="user-info" class="hidden ml-4 text-sm font-medium text-slate-700"></span>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<div class="container max-w-7xl mx-auto p-4 sm:p-8">
+    <div class="mb-8">
+        <input type="text" id="search-bar" placeholder="Search for medicines..." class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition shadow-sm">
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div id="product-grid" class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <!-- Product cards will be inserted here by JavaScript -->
+        </div>
+        <aside class="lg:col-span-1">
+            <div class="bg-white p-6 rounded-xl shadow-md sticky top-8">
+                <h2 class="text-2xl font-semibold text-slate-700 mb-5">Shopping Cart</h2>
+                <div id="cart-items" class="space-y-4 mb-4">
+                    <p class="text-slate-500">Your cart is empty.</p>
+                </div>
+                <div class="border-t pt-4">
+                    <div class="flex justify-between font-bold text-lg text-slate-800">
+                        <span>Total</span>
+                        <span id="cart-total">Rs.0.00</span>
+                    </div>
+                    <button id="checkout-btn" class="w-full mt-4 px-4 py-2 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition duration-200 disabled:bg-gray-400">
+                        Proceed to Checkout
+                    </button>
+                </div>
+            </div>
+        </aside>
+    </div>
+</div>
+
+<!-- Reviews Modal -->
+<div id="reviews-modal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-full max-w-lg shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl leading-6 font-medium text-gray-900" id="reviews-modal-title">Customer Reviews</h3>
+                <button onclick="closeReviewsModal()" class="text-gray-400 hover:text-gray-600 text-2xl font-bold">&times;</button>
+            </div>
+            <div id="reviews-content" class="mt-2 space-y-4 max-h-96 overflow-y-auto p-4">
+                <!-- Reviews will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const productGrid = document.getElementById('product-grid');
+    const cartItemsContainer = document.getElementById('cart-items');
+    const cartTotalEl = document.getElementById('cart-total');
+    const checkoutBtn = document.getElementById('checkout-btn');
+    const searchBar = document.getElementById('search-bar');
+    const loginLink = document.getElementById('login-link');
+    const logoutForm = document.getElementById('logout-form');
+    const userInfo = document.getElementById('user-info');
+    const myOrdersLink = document.getElementById('my-orders-link');
+    const myProfileLink = document.getElementById('my-profile-link');
+    const prescriptionsLink = document.getElementById('prescriptions-link');
+    const reviewsModal = document.getElementById('reviews-modal');
+    const reviewsModalTitle = document.getElementById('reviews-modal-title');
+    const reviewsContent = document.getElementById('reviews-content');
+
+    let allProducts = [];
+    let cart = {};
+    let currentUser = null;
+
+    async function fetchProducts() {
+        const response = await fetch('/api/inventory');
+        allProducts = await response.json();
+        renderProducts(allProducts);
+    }
+
+    function renderProducts(productsToRender) {
+        productGrid.innerHTML = '';
+        if (productsToRender.length === 0) {
+            productGrid.innerHTML = `<p class="text-slate-500 md:col-span-2 xl:col-span-3 text-center">No products found.</p>`;
+            return;
+        }
+
+        productsToRender.forEach(p => {
+            const photoUrl = p.photoFilename
+                ? (p.photoFilename.startsWith('http') || p.photoFilename.startsWith('/') ? p.photoFilename : `/api/inventory/images/${p.photoFilename}`)
+                : 'https://via.placeholder.com/300x300.png?text=No+Image';
+            const productCard = document.createElement('div');
+            productCard.className = 'bg-white rounded-lg shadow-md overflow-hidden flex flex-col';
+            const isOutOfStock = p.stockQuantity <= 0;
+
+            productCard.innerHTML = `
+                <img src="${photoUrl}" alt="${p.name}" class="w-full h-48 object-cover">
+                <div class="p-4 flex-grow flex flex-col">
+                    <h3 class="font-bold text-lg text-slate-800">${p.name}</h3>
+                    <p class="text-sm text-gray-600 flex-grow mt-1">${p.description || 'No description available.'}</p>
+                    <button onclick="openReviewsModal(${p.id}, '${p.name.replace(/'/g, "\\'")}')" class="text-sm text-blue-600 hover:underline mt-2 text-left w-max">View Reviews</button>
+                    <p class="text-xs text-gray-500 mt-2">In Stock: ${p.stockQuantity}</p>
+                    <div class="flex justify-between items-center mt-auto pt-4">
+                        <span class="font-bold text-xl text-blue-600">Rs.${p.price.toFixed(2)}</span>
+                        <div class="flex items-center">
+                             <input type="number" id="quantity-${p.id}" value="1" min="1" max="${p.stockQuantity}" class="w-16 p-1 border border-slate-300 rounded-md text-center" ${isOutOfStock ? 'disabled' : ''}>
+                             <button onclick="addToCart(${p.id})" class="ml-2 px-3 py-1 bg-blue-500 text-white text-sm font-semibold rounded-md hover:bg-blue-600 transition disabled:bg-gray-400" ${isOutOfStock ? 'disabled' : ''}>
+                                ${isOutOfStock ? 'Out of Stock' : 'Add'}
+                             </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            productGrid.appendChild(productCard);
+        });
+    }
+
+    async function openReviewsModal(medicineId, medicineName) {
+        reviewsModalTitle.textContent = `Reviews for ${medicineName}`;
+        reviewsContent.innerHTML = '<p class="text-center text-gray-500">Loading reviews...</p>';
+        reviewsModal.classList.remove('hidden');
+
+        try {
+            const response = await fetch(`/api/reviews/medicine/${medicineId}`);
+            if (response.ok) {
+                const reviews = await response.json();
+                if (reviews.length > 0) {
+                    reviewsContent.innerHTML = reviews.map(r => `
+                        <div class="border-b pb-2">
+                            <p class="font-semibold">${r.customerUsername} <span class="text-yellow-500 ml-2">${'★'.repeat(r.rating)}</span></p>
+                            <p class="text-gray-600 text-sm mt-1">${r.comment}</p>
+                        </div>
+                    `).join('');
+                } else {
+                    reviewsContent.innerHTML = '<p class="text-center text-gray-500">No approved reviews yet for this product.</p>';
+                }
+            } else {
+                reviewsContent.innerHTML = '<p class="text-center text-red-500">Could not load reviews.</p>';
+            }
+        } catch (error) {
+            reviewsContent.innerHTML = '<p class="text-center text-red-500">Could not load reviews.</p>';
+        }
+    }
+
+    function closeReviewsModal() {
+        reviewsModal.classList.add('hidden');
+    }
+
+    function addToCart(productId) {
+        const quantityInput = document.getElementById(`quantity-${productId}`);
+        const quantity = parseInt(quantityInput.value, 10);
+        if (isNaN(quantity) || quantity <= 0) {
+            alert("Please enter a valid quantity.");
+            return;
+        }
+
+        const product = allProducts.find(p => p.id == productId);
+        const currentCartQty = cart[productId] || 0;
+        if ((currentCartQty + quantity) > product.stockQuantity) {
+            alert(`Cannot add ${quantity}. Only ${product.stockQuantity - currentCartQty} more available in stock.`);
+            return;
+        }
+
+        cart[productId] = currentCartQty + quantity;
+        renderCart();
+        quantityInput.value = '1';
+    }
+
+    function updateCartQuantity(productId, change) {
+        if (!cart[productId]) return;
+        const product = allProducts.find(p => p.id == productId);
+        const newQuantity = cart[productId] + change;
+
+        if (change > 0 && newQuantity > product.stockQuantity) {
+            alert(`Cannot add more. Only ${product.stockQuantity} available in stock.`);
+            return;
+        }
+
+        if (newQuantity <= 0) {
+            delete cart[productId];
+        } else {
+            cart[productId] = newQuantity;
+        }
+        renderCart();
+    }
+
+    function renderCart() {
+        cartItemsContainer.innerHTML = '';
+        let total = 0;
+        checkoutBtn.disabled = Object.keys(cart).length === 0;
+
+        if (Object.keys(cart).length === 0) {
+            cartItemsContainer.innerHTML = '<p class="text-slate-500">Your cart is empty.</p>';
+        }
+
+        for (const productId in cart) {
+            const product = allProducts.find(p => p.id == productId);
+            if (!product) continue;
+            const quantity = cart[productId];
+            total += product.price * quantity;
+
+            const itemEl = document.createElement('div');
+            itemEl.className = 'flex justify-between items-center text-sm';
+            itemEl.innerHTML = `
+                <div class="flex-grow">
+                    <p class="font-semibold text-slate-700">${product.name}</p>
+                    <div class="flex items-center text-gray-500 mt-1">
+                        <button onclick="updateCartQuantity(${productId}, -1)" class="px-2 py-0.5 border rounded-md">-</button>
+                        <span class="mx-2">${quantity}</span>
+                        <button onclick="updateCartQuantity(${productId}, 1)" class="px-2 py-0.5 border rounded-md">+</button>
+                        <span class="mx-2">x Rs.${product.price.toFixed(2)}</span>
+                    </div>
+                </div>
+                <span class="font-bold text-slate-800">Rs.${(product.price * quantity).toFixed(2)}</span>
+            `;
+            cartItemsContainer.appendChild(itemEl);
+        }
+        cartTotalEl.textContent = `Rs.${total.toFixed(2)}`;
+    }
+
+    searchBar.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        const filteredProducts = allProducts.filter(p =>
+            p.name.toLowerCase().includes(searchTerm) ||
+            (p.description && p.description.toLowerCase().includes(searchTerm))
+        );
+        renderProducts(filteredProducts);
+    });
+
+    function handleCheckout() {
+        if (!currentUser) {
+            alert('You must be logged in to proceed to checkout. Redirecting to login page.');
+            window.location.href = '/login.html';
+            return;
+        }
+        if (Object.keys(cart).length === 0) {
+            alert("Your cart is empty.");
+            return;
+        }
+        sessionStorage.setItem('cart', JSON.stringify(cart));
+        window.location.href = '/checkout.html';
+    }
+
+    async function checkLoginStatus() {
+        try {
+            const response = await fetch('/api/auth/me');
+            if (response.ok) {
+                currentUser = await response.json();
+                loginLink.classList.add('hidden');
+                logoutForm.classList.remove('hidden');
+                userInfo.textContent = `Welcome, ${currentUser.username}!`;
+                userInfo.classList.remove('hidden');
+
+                if (currentUser.role === 'ROLE_CUSTOMER') {
+                    myOrdersLink.classList.remove('hidden');
+                    myProfileLink.classList.remove('hidden');
+                    prescriptionsLink.classList.remove('hidden');
+                }
+            } else {
+                currentUser = null;
+                loginLink.classList.remove('hidden');
+                logoutForm.classList.add('hidden');
+                userInfo.classList.add('hidden');
+                myOrdersLink.classList.add('hidden');
+                myProfileLink.classList.add('hidden');
+                prescriptionsLink.classList.add('hidden');
+            }
+        } catch (error) {
+            currentUser = null;
+        }
+    }
+
+    checkoutBtn.addEventListener('click', handleCheckout);
+
+    document.addEventListener('DOMContentLoaded', async () => {
+        await checkLoginStatus();
+        await fetchProducts();
+        renderCart();
+    });
+</script>
+</body>
+</html>

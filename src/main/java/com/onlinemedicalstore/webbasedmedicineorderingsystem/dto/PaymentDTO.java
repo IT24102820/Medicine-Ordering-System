@@ -1,0 +1,34 @@
+package com.onlinemedicalstore.webbasedmedicineorderingsystem.dto;
+
+import com.onlinemedicalstore.webbasedmedicineorderingsystem.entity.PaymentStatus;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+/**
+ * A Data Transfer Object to safely send payment details to the frontend
+ * without causing serialization loops.
+ */
+public class PaymentDTO {
+    private Long id;
+    private PaymentStatus status;
+    private BigDecimal amount;
+    private LocalDateTime creationDate;
+    private Long orderId;
+    private String customerUsername;
+
+    // Getters and Setters
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public PaymentStatus getStatus() { return status; }
+    public void setStatus(PaymentStatus status) { this.status = status; }
+    public BigDecimal getAmount() { return amount; }
+    public void setAmount(BigDecimal amount) { this.amount = amount; }
+    public LocalDateTime getCreationDate() { return creationDate; }
+    public void setCreationDate(LocalDateTime creationDate) { this.creationDate = creationDate; }
+    public Long getOrderId() { return orderId; }
+    public void setOrderId(Long orderId) { this.orderId = orderId; }
+    public String getCustomerUsername() { return customerUsername; }
+    public void setCustomerUsername(String customerUsername) { this.customerUsername = customerUsername; }
+}
+

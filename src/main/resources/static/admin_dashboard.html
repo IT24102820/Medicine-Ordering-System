@@ -1,0 +1,114 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/pharmago.css">
+</head>
+<body class="bg-slate-100">
+<nav class="bg-white shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+            <div class="flex">
+                <div class="flex-shrink-0 flex items-center font-bold text-xl text-blue-600">PharmaGo Admin</div>
+                <div class="hidden sm:ml-6 sm:flex sm:space-x-8" id="nav-links">
+                    <a href="/admin_dashboard.html" class="border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Dashboard</a>
+                </div>
+            </div>
+            <div class="hidden sm:ml-6 sm:flex sm:items-center" id="nav-user"></div>
+        </div>
+    </div>
+</nav>
+
+<div class="container max-w-5xl mx-auto p-4 sm:p-8">
+    <header class="text-center mb-10">
+        <h1 class="text-4xl font-bold text-slate-700">Admin Dashboard</h1>
+        <p class="text-slate-500 mt-2">Welcome, <span id="username-display"></span>!</p>
+    </header>
+
+    <div id="dashboard-links" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Links will be populated by script based on role -->
+    </div>
+</div>
+
+<script>
+    async function checkAuth() {
+        try {
+            const response = await fetch('/api/auth/me');
+            if (!response.ok) {
+                window.location.href = '/login.html';
+                return;
+            }
+            const user = await response.json();
+            const isAdmin = user.role !== 'ROLE_CUSTOMER';
+
+            if (!isAdmin) {
+                alert("Access Denied: You do not have permission to view this page.");
+                window.location.href = '/store.html';
+                return;
+            }
+
+            populateUI(user);
+
+        } catch (error) {
+            window.location.href = '/login.html';
+        }
+    }
+
+    function createDashboardCard(href, title, description) {
+        return `
+            <a href="${href}" class="block bg-white p-6 rounded-xl shadow-md hover:shadow-lg hover:-translate-y-1 transition-all">
+                <h3 class="font-bold text-lg text-blue-600">${title}</h3>
+                <p class="text-slate-500 mt-1">${description}</p>
+            </a>
+        `;
+    }
+
+    function populateUI(user) {
+        document.getElementById('username-display').textContent = user.username;
+        const navLinks = document.getElementById('nav-links');
+        const navUser = document.getElementById('nav-user');
+        const dashboardLinks = document.getElementById('dashboard-links');
+
+        navUser.innerHTML = `
+            <span class="text-sm text-gray-600 mr-4">Logged in as ${user.username} (${user.role.replace('ROLE_', '')})</span>
+             <form action="/logout" method="post">
+                <button type="submit" class="px-3 py-1 bg-red-500 text-white text-sm font-semibold rounded-md hover:bg-red-600 transition">Logout</button>
+             </form>
+        `;
+
+        let navHtml = '<a href="/admin_dashboard.html" class="border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Dashboard</a>';
+        let dashboardHtml = '';
+
+        if (['ROLE_INVENTORY_MANAGER', 'ROLE_SUPER_ADMIN'].includes(user.role)) {
+            navHtml += '<a href="/inventory.html" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Inventory</a>';
+            dashboardHtml += createDashboardCard('/inventory.html', 'Inventory Management', 'Add, edit, and remove medicines from stock.');
+        }
+        if (['ROLE_FINANCE_OFFICER', 'ROLE_SUPER_ADMIN'].includes(user.role)) {
+            navHtml += '<a href="/finance_dashboard.html" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Finance</a>';
+            dashboardHtml += createDashboardCard('/finance_dashboard.html', 'Finance Dashboard', 'Monitor payments and manage customer reviews.');
+        }
+        if (['ROLE_FINANCE_OFFICER', 'ROLE_SUPER_ADMIN', 'ROLE_DELIVERY_COORDINATOR', 'ROLE_INVENTORY_MANAGER'].includes(user.role)) {
+            navHtml += '<a href="/orders.html" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Orders</a>';
+            dashboardHtml += createDashboardCard('/orders.html', 'Order Management', 'View and manage all customer orders.');
+        }
+        if (['ROLE_GENERAL_PHYSICIAN', 'ROLE_PHARMACY_ASSISTANT', 'ROLE_SUPER_ADMIN'].includes(user.role)) {
+            navHtml += '<a href="/view_prescriptions.html" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Prescriptions</a>';
+            dashboardHtml += createDashboardCard('/view_prescriptions.html', 'Review Prescriptions', 'View and manage customer-uploaded prescriptions.');
+        }
+        if (user.role === 'ROLE_SUPER_ADMIN') {
+            navHtml += '<a href="/user_management.html" class="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">User Management</a>';
+            dashboardHtml += createDashboardCard('/user_management.html', 'User Management', 'Create, edit, and manage all user accounts.');
+        }
+
+        navLinks.innerHTML = navHtml;
+        dashboardLinks.innerHTML = dashboardHtml || '<p class="text-center col-span-full">No administrative sections are available for your role.</p>';
+    }
+
+    document.addEventListener('DOMContentLoaded', checkAuth);
+</script>
+</body>
+</html>
+

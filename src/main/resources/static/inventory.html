@@ -1,0 +1,211 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventory Management</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/pharmago.css">
+</head>
+<body class="bg-slate-100 text-black text-slate-800">
+<nav class="bg-white shadow-md">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between h-16">
+      <div class="flex">
+        <div class="flex-shrink-0 flex items-center font-bold text-xl text-blue-600">PharmaGo Admin</div>
+        <div class="hidden sm:ml-6 sm:flex sm:space-x-8" id="nav-links"></div>
+      </div>
+      <div class="hidden sm:ml-6 sm:flex sm:items-center" id="nav-user"></div>
+    </div>
+  </div>
+</nav>
+
+<div class="container max-w-6xl mx-auto p-4 sm:p-8">
+  <header class="text-center mb-10">
+    <h1 class="text-4xl font-bold text-slate-700">Inventory Management</h1>
+    <p class="text-slate-500 mt-2">Manage your medicine stock.</p>
+  </header>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div class="lg:col-span-1 bg-white p-6 rounded-xl shadow-md">
+      <h2 class="text-2xl font-semibold text-slate-700 mb-5">Manage Medicine</h2>
+      <form id="medicine-form" class="space-y-4">
+        <input type="hidden" id="medicine-id">
+        <div>
+          <label for="name" class="block text-sm font-medium text-slate-600 mb-1">Name</label>
+          <input type="text" id="name" required class="w-full p-2 border rounded-md">
+        </div>
+        <div>
+          <label for="description" class="block text-sm font-medium text-slate-600 mb-1">Description</label>
+          <input type="text" id="description" class="w-full p-2 border rounded-md">
+        </div>
+        <div>
+          <label for="stock-quantity" class="block text-sm font-medium text-slate-600 mb-1">Stock Quantity</label>
+          <input type="number" id="stock-quantity" required min="0" class="w-full p-2 border rounded-md">
+        </div>
+        <div>
+          <label for="price" class="block text-sm font-medium text-slate-600 mb-1">Price (Rs.)</label>
+          <input type="number" id="price" step="0.01" required min="0" class="w-full p-2 border rounded-md">
+        </div>
+        <div>
+          <label for="expiry-date" class="block text-sm font-medium text-slate-600 mb-1">Expiry Date</label>
+          <input type="date" id="expiry-date" required class="w-full p-2 border rounded-md">
+        </div>
+        <div>
+          <label for="photo" class="block text-sm font-medium text-slate-600 mb-1">Photo</label>
+          <input type="file" id="photo" accept="image/*" class="w-full text-sm">
+        </div>
+        <div class="flex justify-end space-x-3 pt-2">
+          <button type="button" id="clear-btn" class="px-4 py-2 bg-green-500 text-white rounded-md">Clear</button>
+          <button type="button" id="save-btn" class="px-4 py-2 bg-blue-600 text-black rounded-md">Save</button>
+        </div>
+      </form>
+    </div>
+
+    <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-md">
+      <h2 class="text-2xl font-semibold text-pink-700 mb-5">Current Inventory</h2>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left">
+          <thead class="text-xs text-slate-700 uppercase bg-slate-50">
+          <tr>
+            <th class="px-6 py-3">Photo</th>
+            <th class="px-6 py-3">Name</th>
+            <th class="px-6 py-3">Quantity</th>
+            <th class="px-6 py-3">Price</th>
+            <th class="px-6 py-3">Expiry</th>
+            <th class="px-6 py-3 text-center">Actions</th>
+          </tr>
+          </thead>
+          <tbody id="inventory-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  async function checkAuth() {
+    try {
+      const response = await fetch('/api/auth/me');
+      if (!response.ok) { window.location.href = '/login.html'; return; }
+      const user = await response.json();
+      const canManageInventory = ['ROLE_INVENTORY_MANAGER', 'ROLE_SUPER_ADMIN'].includes(user.role);
+      if (!canManageInventory) {
+        alert("You don't have permission to view this page.");
+        window.location.href = '/admin_dashboard.html';
+        return;
+      }
+      populateNav(user);
+    } catch (error) { window.location.href = '/login.html'; }
+  }
+
+  function populateNav(user) {
+    const navLinks = document.getElementById('nav-links');
+    const navUser = document.getElementById('nav-user');
+    navUser.innerHTML = `
+            <span class="text-sm text-gray-600 mr-4">Logged in as ${user.username}</span>
+            <form action="/logout" method="post"><button type="submit" class="px-3 py-1 bg-red-500 text-white text-sm font-semibold rounded-md">Logout</button></form>`;
+
+    let navHtml = '<a href="/admin_dashboard.html" class="border-transparent text-gray-500 hover:border-gray-300 inline-flex items-center px-1 pt-1 border-b-2 text-sm">Dashboard</a>';
+    navHtml += '<a href="/inventory.html" class="border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Inventory</a>';
+
+    if (['ROLE_FINANCE_OFFICER', 'ROLE_SUPER_ADMIN', 'ROLE_INVENTORY_MANAGER'].includes(user.role)) {
+      navHtml += '<a href="/orders.html" class="border-transparent text-gray-500 hover:border-gray-300 inline-flex items-center px-1 pt-1 border-b-2 text-sm">Orders</a>';
+    }
+    if (user.role === 'ROLE_SUPER_ADMIN') {
+      navHtml += '<a href="/user_management.html" class="border-transparent text-gray-500 hover:border-gray-300 inline-flex items-center px-1 pt-1 border-b-2 text-sm">User Management</a>';
+    }
+    navLinks.innerHTML = navHtml;
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    checkAuth();
+
+    const apiUrl = '/api/inventory';
+    const medicineForm = document.getElementById('medicine-form');
+    const saveBtn = document.getElementById('save-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    const inventoryBody = document.getElementById('inventory-body');
+
+    const fetchMedicines = async () => {
+      const response = await fetch(apiUrl);
+      const medicines = await response.json();
+      inventoryBody.innerHTML = '';
+      medicines.forEach(medicine => {
+        const row = document.createElement('tr');
+        row.className = "bg-white border-b hover:bg-slate-50";
+        const photoUrl = medicine.photoFilename
+          ? (medicine.photoFilename.startsWith('http') || medicine.photoFilename.startsWith('/') ? medicine.photoFilename : `${apiUrl}/images/${medicine.photoFilename}`)
+          : 'https://via.placeholder.com/100x100.png?text=No+Image';
+        row.innerHTML = `
+                    <td class="px-6 py-4"><img src="${photoUrl}" alt="${medicine.name}" class="w-16 h-16 object-cover rounded-md"></td>
+                    <td class="px-6 py-4 font-medium">${medicine.name}</td>
+                    <td class="px-6 py-4">${medicine.stockQuantity}</td>
+                    <td class="px-6 py-4">Rs.${medicine.price.toFixed(2)}</td>
+                    <td class="px-6 py-4">${medicine.expiryDate}</td>
+                    <td class="px-6 py-4 text-center">
+                        <button class="font-medium text-yellow-600 mr-3 edit-btn" data-id="${medicine.id}">Edit</button>
+                        <button class="font-medium text-red-600 delete-btn" data-id="${medicine.id}">Delete</button>
+                    </td>`;
+        inventoryBody.appendChild(row);
+      });
+    };
+
+    const handleSave = async () => {
+      const id = document.getElementById('medicine-id').value;
+      const photoFile = document.getElementById('photo').files[0];
+      const medicineData = {
+        name: document.getElementById('name').value,
+        description: document.getElementById('description').value,
+        stockQuantity: parseInt(document.getElementById('stock-quantity').value, 10),
+        price: parseFloat(document.getElementById('price').value),
+        expiryDate: document.getElementById('expiry-date').value
+      };
+
+      const formData = new FormData();
+      formData.append('medicine', new Blob([JSON.stringify(medicineData)], { type: "application/json" }));
+      if (photoFile) formData.append('photo', photoFile);
+
+      const method = id ? 'PUT' : 'POST';
+      const url = id ? `${apiUrl}/${id}` : apiUrl;
+
+      const response = await fetch(url, { method, body: formData });
+      if (response.ok) {
+        clearForm();
+        fetchMedicines();
+      } else {
+        alert('Error: Could not save medicine.');
+      }
+    };
+
+    const clearForm = () => { medicineForm.reset(); document.getElementById('medicine-id').value = ''; };
+    saveBtn.addEventListener('click', handleSave);
+    clearBtn.addEventListener('click', clearForm);
+
+    inventoryBody.addEventListener('click', async (event) => {
+      const { target } = event;
+      const id = target.dataset.id;
+      if (target.classList.contains('delete-btn')) {
+        if (confirm('Are you sure?')) {
+          await fetch(`${apiUrl}/${id}`, { method: 'DELETE' });
+          fetchMedicines();
+        }
+      }
+      if (target.classList.contains('edit-btn')) {
+        const response = await fetch(`${apiUrl}/${id}`);
+        const medicine = await response.json();
+        document.getElementById('medicine-id').value = medicine.id;
+        document.getElementById('name').value = medicine.name;
+        document.getElementById('description').value = medicine.description;
+        document.getElementById('stock-quantity').value = medicine.stockQuantity;
+        document.getElementById('price').value = medicine.price;
+        document.getElementById('expiry-date').value = medicine.expiryDate;
+        medicineForm.scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+
+    fetchMedicines();
+  });
+</script>
+</body>
+</html>

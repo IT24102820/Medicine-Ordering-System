@@ -1,0 +1,37 @@
+package com.onlinemedicalstore.webbasedmedicineorderingsystem.dto;
+
+/**
+ * A DTO for accepting review submissions from the frontend.
+ */
+public class ReviewSubmissionDTO {
+    private Long medicineId;
+    private int rating;
+    private String comment;
+
+    // Getters and Setters
+    public Long getMedicineId() {
+        return medicineId;
+    }
+
+    public void setMedicineId(Long medicineId) {
+        this.medicineId = medicineId;
+    }
+
+    public int getRating() {
+        return rating;
+    }
+
+    public void setRating(int rating) {
+        this.rating = rating;
+    }
+
+    public String getComment() {
+        return comment;
+    }
+
+    public void setComment(String comment) {
+        this.comment = comment;
+    }
+}
+
+

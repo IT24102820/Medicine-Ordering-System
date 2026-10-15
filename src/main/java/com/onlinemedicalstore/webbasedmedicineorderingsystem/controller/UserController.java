@@ -1,0 +1,93 @@
+package com.onlinemedicalstore.webbasedmedicineorderingsystem.controller;
+
+import com.onlinemedicalstore.webbasedmedicineorderingsystem.entity.User;
+import com.onlinemedicalstore.webbasedmedicineorderingsystem.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.security.Principal;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/users")
+@CrossOrigin(origins = "http://localhost:8080")
+public class UserController {
+
+    @Autowired
+    private UserService userService;
+
+    // --- Endpoints for individual users to manage their own profile ---
+
+    @GetMapping("/me")
+    public ResponseEntity<User> getMyProfile(Principal principal) {
+        return ResponseEntity.ok(userService.findUserByUsername(principal.getName()));
+    }
+
+    @PutMapping("/me")
+    public ResponseEntity<?> updateMyProfile(@RequestBody Map<String, String> updates, Principal principal) {
+        try {
+            User updatedUser = userService.updateUserProfile(principal.getName(), updates.get("username"), updates.get("email"));
+            return ResponseEntity.ok(updatedUser);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PutMapping("/me/password")
+    public ResponseEntity<?> changeMyPassword(@RequestBody Map<String, String> passwordData, Principal principal) {
+        try {
+            userService.changeUserPassword(principal.getName(), passwordData.get("oldPassword"), passwordData.get("newPassword"));
+            return ResponseEntity.ok("Password updated successfully.");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/me")
+    public ResponseEntity<?> deleteMyAccount(Principal principal) {
+        userService.deleteUser(principal.getName());
+        return ResponseEntity.ok("Account deleted successfully.");
+    }
+
+    // --- Super Admin Endpoints for Managing All Users ---
+
+    @GetMapping("/all")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<List<User>> getAllUsers() {
+        return ResponseEntity.ok(userService.findAllUsers());
+    }
+
+    @PostMapping
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<?> createUser(@RequestBody User user) {
+        try {
+            return ResponseEntity.ok(userService.createUserByAdmin(user));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<?> updateUser(@PathVariable Long id, @RequestBody User userDetails) {
+        try {
+            return ResponseEntity.ok(userService.updateUserByAdmin(id, userDetails));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<?> deleteUser(@PathVariable Long id) {
+        try {
+            userService.deleteUserByAdmin(id);
+            return ResponseEntity.ok("User deleted successfully.");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+}

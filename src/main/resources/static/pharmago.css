@@ -1,0 +1,121 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap');
+
+:root {
+    --pharma-navy: #123047;
+    --pharma-teal: #0f766e;
+    --pharma-mint: #dff7f1;
+    --pharma-blue: #1769aa;
+    --pharma-ink: #163042;
+    --pharma-muted: #647b88;
+    --pharma-line: #d9e7e8;
+    --pharma-bg: #f3f8f7;
+    --pharma-coral: #e56b50;
+}
+
+* { box-sizing: border-box; }
+body {
+    background: var(--pharma-bg) !important;
+    color: var(--pharma-ink);
+    font-family: 'DM Sans', sans-serif;
+    letter-spacing: -0.01em;
+}
+h1, h2, h3, h4, .font-bold, .font-semibold { font-family: 'Plus Jakarta Sans', sans-serif; }
+nav {
+    background: rgba(255, 255, 255, 0.94) !important;
+    border-bottom: 1px solid var(--pharma-line);
+    box-shadow: 0 4px 18px rgba(18, 48, 71, 0.06) !important;
+}
+nav .text-blue-600, nav .text-blue-500 { color: var(--pharma-teal) !important; }
+nav a { transition: color .2s ease, border-color .2s ease; }
+nav a:hover { color: var(--pharma-teal) !important; border-color: var(--pharma-teal) !important; }
+button, a { transition: transform .2s ease, box-shadow .2s ease, background-color .2s ease; }
+button:not(:disabled):hover { transform: translateY(-1px); }
+button.bg-blue-600, button.bg-blue-500, .bg-blue-600, .bg-blue-500 {
+    background-color: var(--pharma-teal) !important;
+}
+button.bg-red-500, .bg-red-500 { background-color: var(--pharma-coral) !important; }
+.text-blue-600, .text-blue-500 { color: var(--pharma-teal) !important; }
+.text-pink-700 { color: var(--pharma-teal) !important; }
+.text-slate-700, .text-slate-800 { color: var(--pharma-ink) !important; }
+.text-slate-500, .text-gray-500, .text-gray-600 { color: var(--pharma-muted) !important; }
+.container { max-width: 1180px !important; }
+header { position: relative; }
+header h1 { letter-spacing: -0.04em; }
+header h1::after {
+    content: '';
+    display: block;
+    width: 42px;
+    height: 4px;
+    margin: 14px auto 0;
+    border-radius: 10px;
+    background: var(--pharma-teal);
+}
+.bg-white {
+    border: 1px solid var(--pharma-line);
+    box-shadow: 0 10px 28px rgba(18, 48, 71, 0.07) !important;
+}
+.rounded-xl { border-radius: 18px !important; }
+.rounded-lg { border-radius: 14px !important; }
+input, select, textarea {
+    background-color: #fff !important;
+    border-color: var(--pharma-line) !important;
+    color: var(--pharma-ink) !important;
+}
+input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--pharma-teal) !important;
+    box-shadow: 0 0 0 3px rgba(15, 118, 110, .14) !important;
+}
+table thead { background: #edf7f5 !important; }
+table th { color: var(--pharma-navy) !important; letter-spacing: .06em; }
+table tbody tr { border-color: var(--pharma-line) !important; }
+#product-grid > div {
+    border: 1px solid var(--pharma-line);
+    box-shadow: 0 8px 20px rgba(18, 48, 71, .06);
+    transition: transform .2s ease, box-shadow .2s ease;
+}
+#product-grid > div:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 28px rgba(18, 48, 71, .12);
+}
+#product-grid img { background: #eef8f5; }
+#cart-items > div { border-color: var(--pharma-line) !important; }
+.login-shell {
+    background: linear-gradient(135deg, #e2f6f0, #f3f8f7);
+}
+.login-shell > div { max-width: 430px; }
+.login-shell h1 { color: var(--pharma-teal) !important; }
+.login-shell h1::before {
+    content: '✚';
+    display: inline-grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    margin-right: 10px;
+    border-radius: 12px;
+    color: white;
+    background: var(--pharma-teal);
+    font-size: 23px;
+    vertical-align: -5px;
+}
+#dashboard-links > a {
+    position: relative;
+    overflow: hidden;
+    border-top: 4px solid var(--pharma-teal);
+}
+#dashboard-links > a::after {
+    content: '→';
+    position: absolute;
+    right: 24px;
+    bottom: 20px;
+    color: var(--pharma-teal);
+    font-size: 22px;
+}
+#dashboard-links > a:hover { transform: translateY(-4px); }
+.status-badge { border-radius: 999px; font-size: .72rem; font-weight: 700; }
+@media (max-width: 640px) {
+    nav .flex.justify-between { min-height: 64px; height: auto; padding: 10px 0; }
+    nav .hidden.sm\:flex { display: none; }
+    .container { padding: 1.25rem !important; }
+    header h1 { font-size: 2rem !important; }
+}

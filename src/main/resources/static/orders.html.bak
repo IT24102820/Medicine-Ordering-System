@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Orders</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100">
+<nav class="bg-white shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+            <div class="flex">
+                <div class="flex-shrink-0 flex items-center font-bold text-xl text-blue-600">PharmaGo Admin</div>
+                <div class="hidden sm:ml-6 sm:flex sm:space-x-8" id="nav-links"></div>
+            </div>
+            <div class="hidden sm:ml-6 sm:flex sm:items-center" id="nav-user"></div>
+        </div>
+    </div>
+</nav>
+
+<div class="container max-w-5xl mx-auto p-4 sm:p-8">
+    <header class="text-center mb-10">
+        <h1 class="text-4xl font-bold text-slate-700">Customer Orders</h1>
+        <p class="text-slate-500 mt-2">A list of all completed transactions.</p>
+    </header>
+
+    <div id="orders-container" class="space-y-6"></div>
+</div>
+
+<script>
+    async function checkAuth() {
+        try {
+            const response = await fetch('/api/auth/me');
+            if (!response.ok) { window.location.href = '/login.html'; return; }
+            const user = await response.json();
+            const canViewOrders = ['ROLE_FINANCE_OFFICER', 'ROLE_SUPER_ADMIN', 'ROLE_DELIVERY_COORDINATOR', 'ROLE_INVENTORY_MANAGER'].includes(user.role);
+            if (!canViewOrders) {
+                alert("You don't have permission to view this page.");
+                window.location.href = '/admin_dashboard.html';
+                return;
+            }
+            populateNav(user);
+        } catch (error) { window.location.href = '/login.html'; }
+    }
+
+    function populateNav(user) {
+        const navLinks = document.getElementById('nav-links');
+        const navUser = document.getElementById('nav-user');
+        navUser.innerHTML = `
+            <span class="text-sm text-gray-600 mr-4">Logged in as ${user.username}</span>
+            <form action="/logout" method="post"><button type="submit" class="px-3 py-1 bg-red-500 text-white text-sm font-semibold rounded-md">Logout</button></form>`;
+
+        let navHtml = '<a href="/admin_dashboard.html" class="border-transparent text-gray-500 inline-flex items-center px-1 pt-1 border-b-2 text-sm">Dashboard</a>';
+        if (['ROLE_INVENTORY_MANAGER', 'ROLE_SUPER_ADMIN'].includes(user.role)) {
+            navHtml += '<a href="/inventory.html" class="border-transparent text-gray-500 inline-flex items-center px-1 pt-1 border-b-2 text-sm">Inventory</a>';
+        }
+        navHtml += '<a href="/orders.html" class="border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Orders</a>';
+        if (user.role === 'ROLE_SUPER_ADMIN') {
+            navHtml += '<a href="/user_management.html" class="border-transparent text-gray-500 hover:border-gray-300 inline-flex items-center px-1 pt-1 border-b-2 text-sm">User Management</a>';
+        }
+        navLinks.innerHTML = navHtml;
+    }
+
+    const ordersContainer = document.getElementById('orders-container');
+    async function fetchOrders() {
+        const response = await fetch('/api/orders');
+        const orders = await response.json();
+        renderOrders(orders);
+    }
+
+    function renderOrders(orders) {
+        ordersContainer.innerHTML = '';
+        if(orders.length === 0) {
+            ordersContainer.innerHTML = '<p class="text-center text-gray-500">No orders found.</p>';
+            return;
+        }
+
+        orders.reverse().forEach(order => {
+            const orderCard = document.createElement('div');
+            orderCard.className = 'bg-white p-6 rounded-xl shadow-md';
+            const orderItemsHtml = order.orderItems.map(item => `
+                <div class="flex justify-between py-2 border-b">
+                    <span>${item.medicine.name}</span>
+                    <span class="text-gray-500">${item.quantity} x Rs.${item.price.toFixed(2)}</span>
+                    <span class="font-semibold">Rs.${(item.quantity * item.price).toFixed(2)}</span>
+                </div>`).join('');
+
+            orderCard.innerHTML = `
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h3 class="font-bold text-lg">Order #${order.id}</h3>
+                        <p class="text-sm text-gray-600">Customer: ${order.user ? order.user.username : 'N/A'}</p>
+                        <span class="text-sm text-gray-500">${new Date(order.orderDate).toLocaleString()}</span>
+                    </div>
+                    <button onclick="cancelOrder(${order.id})" class="px-3 py-1 bg-red-500 text-white text-sm font-semibold rounded-md">Cancel Order</button>
+                </div>
+                <div class="space-y-2 mb-4">${orderItemsHtml}</div>
+                <div class="text-right font-bold text-xl text-blue-600">Total: Rs.${order.totalPrice.toFixed(2)}</div>`;
+            ordersContainer.appendChild(orderCard);
+        });
+    }
+
+    async function cancelOrder(orderId) {
+        if (!confirm('Are you sure you want to cancel this order?')) { return; }
+        const response = await fetch(`/api/orders/${orderId}`, { method: 'DELETE' });
+        if (response.ok) {
+            fetchOrders();
+        } else {
+            alert("Failed to cancel order.");
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        checkAuth();
+        fetchOrders();
+    });
+</script>
+</body>
+</html>

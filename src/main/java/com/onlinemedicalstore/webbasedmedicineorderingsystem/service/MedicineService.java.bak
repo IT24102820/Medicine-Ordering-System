@@ -1,0 +1,80 @@
+package com.onlinemedicalstore.webbasedmedicineorderingsystem.service;
+
+import com.onlinemedicalstore.webbasedmedicineorderingsystem.entity.Medicine;
+import com.onlinemedicalstore.webbasedmedicineorderingsystem.repository.MedicineRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import java.time.LocalDate;
+import java.util.List;
+
+@Service
+public class MedicineService {
+
+    @ResponseStatus(value = HttpStatus.NOT_FOUND)
+    public static class ResourceNotFoundException extends RuntimeException {
+        public ResourceNotFoundException(String message) {
+            super(message);
+        }
+    }
+
+    @Autowired
+    private MedicineRepository medicineRepository;
+
+    @Autowired
+    private FileStorageService fileStorageService;
+
+    private void validateMedicine(Medicine medicine) {
+        if (medicine.getStockQuantity() < 0) {
+            throw new IllegalArgumentException("Stock quantity cannot be negative.");
+        }
+        if (medicine.getExpiryDate() != null && medicine.getExpiryDate().isBefore(LocalDate.now().plusDays(1))) {
+            throw new IllegalArgumentException("Expiry date must be a future date.");
+        }
+    }
+
+    public Medicine addMedicine(Medicine medicine) {
+        validateMedicine(medicine);
+        return medicineRepository.save(medicine);
+    }
+
+    public List<Medicine> getAllMedicines() {
+        return medicineRepository.findAll();
+    }
+
+    public Medicine getMedicineById(Long id) {
+        return medicineRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Medicine not found with id: " + id));
+    }
+
+    @Transactional
+    public Medicine updateMedicine(Long id, Medicine medicineDetails) {
+        validateMedicine(medicineDetails);
+        Medicine existingMedicine = getMedicineById(id);
+
+        if (medicineDetails.getPhotoFilename() != null) {
+            fileStorageService.deleteFile(existingMedicine.getPhotoFilename());
+        } else {
+            medicineDetails.setPhotoFilename(existingMedicine.getPhotoFilename());
+        }
+
+        existingMedicine.setName(medicineDetails.getName());
+        existingMedicine.setDescription(medicineDetails.getDescription());
+        existingMedicine.setStockQuantity(medicineDetails.getStockQuantity());
+        existingMedicine.setExpiryDate(medicineDetails.getExpiryDate());
+        existingMedicine.setPrice(medicineDetails.getPrice());
+        existingMedicine.setPhotoFilename(medicineDetails.getPhotoFilename());
+
+        return medicineRepository.save(existingMedicine);
+    }
+
+    @Transactional
+    public void deleteMedicine(Long id) {
+        Medicine medicine = getMedicineById(id);
+        fileStorageService.deleteFile(medicine.getPhotoFilename());
+        medicineRepository.delete(medicine);
+    }
+}
+

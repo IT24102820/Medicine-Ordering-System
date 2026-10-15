@@ -1,0 +1,154 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Review Prescriptions - PharmaGo</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/pharmago.css">
+</head>
+<body class="bg-slate-100 text-slate-800">
+<nav class="bg-white shadow-md">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between h-16">
+      <div class="flex">
+        <div class="flex-shrink-0 flex items-center font-bold text-xl text-blue-600">PharmaGo Admin</div>
+        <div class="hidden sm:ml-6 sm:flex sm:space-x-8" id="nav-links"></div>
+      </div>
+      <div class="hidden sm:ml-6 sm:flex sm:items-center" id="nav-user"></div>
+    </div>
+  </div>
+</nav>
+
+<div class="container max-w-7xl mx-auto p-4 sm:p-8">
+  <header class="text-center mb-10">
+    <h1 class="text-4xl font-bold text-slate-700">Customer Prescriptions</h1>
+    <p class="text-slate-500 mt-2">Review and manage all uploaded prescriptions.</p>
+  </header>
+
+  <div class="overflow-x-auto bg-white p-6 rounded-xl shadow-md">
+    <table class="w-full text-sm text-left">
+      <thead class="text-xs text-slate-700 uppercase bg-slate-50">
+      <tr>
+        <th class="px-6 py-3">Prescription</th>
+        <th class="px-6 py-3">Customer</th>
+        <th class="px-6 py-3">Upload Date</th>
+        <th class="px-6 py-3">Status</th>
+        <th class="px-6 py-3 text-center">Actions</th>
+      </tr>
+      </thead>
+      <tbody id="prescriptions-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  const prescriptionsBody = document.getElementById('prescriptions-body');
+
+  async function checkAuth() {
+    try {
+      const response = await fetch('/api/auth/me');
+      if (!response.ok) { window.location.href = '/login.html'; return; }
+      const user = await response.json();
+      const canView = ['ROLE_GENERAL_PHYSICIAN', 'ROLE_PHARMACY_ASSISTANT', 'ROLE_SUPER_ADMIN'].includes(user.role);
+      if (!canView) {
+        alert("Access Denied.");
+        window.location.href = '/admin_dashboard.html';
+        return;
+      }
+      populateNav(user);
+    } catch (error) { window.location.href = '/login.html'; }
+  }
+
+  function populateNav(user) {
+    const navLinks = document.getElementById('nav-links');
+    const navUser = document.getElementById('nav-user');
+    navUser.innerHTML = `<span class="text-sm mr-4">Logged in as ${user.username}</span><form action="/logout" method="post"><button type="submit" class="px-3 py-1 bg-red-500 text-white rounded-md">Logout</button></form>`;
+
+    let navHtml = '<a href="/admin_dashboard.html" class="border-transparent text-gray-500 inline-flex items-center px-1 pt-1 border-b-2 text-sm">Dashboard</a>';
+    if (['ROLE_INVENTORY_MANAGER', 'ROLE_SUPER_ADMIN'].includes(user.role)) {
+      navHtml += '<a href="/inventory.html" class="border-transparent text-gray-500 inline-flex items-center px-1 pt-1 border-b-2 text-sm">Inventory</a>';
+    }
+    if (['ROLE_FINANCE_OFFICER', 'ROLE_SUPER_ADMIN'].includes(user.role)) {
+      navHtml += '<a href="/finance_dashboard.html" class="border-transparent text-gray-500 inline-flex items-center px-1 pt-1 border-b-2 text-sm">Finance</a>';
+    }
+    navHtml += '<a href="/view_prescriptions.html" class="border-blue-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium">Prescriptions</a>';
+    if (user.role === 'ROLE_SUPER_ADMIN') {
+      navHtml += '<a href="/user_management.html" class="border-transparent text-gray-500 inline-flex items-center px-1 pt-1 border-b-2 text-sm">User Management</a>';
+    }
+    navLinks.innerHTML = navHtml;
+  }
+
+  function getStatusClass(status) {
+    switch (status) {
+      case 'REVIEWED': return 'bg-green-100 text-green-800';
+      case 'PENDING': return 'bg-yellow-100 text-yellow-800';
+      case 'REJECTED': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100';
+    }
+  }
+
+  function renderPrescriptions(prescriptions) {
+    prescriptionsBody.innerHTML = '';
+    if (prescriptions.length === 0) {
+      prescriptionsBody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-gray-500">No prescriptions have been uploaded.</td></tr>';
+      return;
+    }
+
+    prescriptions.forEach(p => {
+      const row = document.createElement('tr');
+      row.className = 'bg-white border-b';
+      // CORRECTED: Use p.customerUsername instead of p.user.username
+      row.innerHTML = `
+                <td class="px-6 py-4">
+                    <a href="/api/inventory/images/${p.filename}" target="_blank" title="View full image">
+                        <img src="/api/inventory/images/${p.filename}" class="w-24 h-24 object-contain rounded-md bg-gray-100 hover:opacity-80 transition">
+                    </a>
+                </td>
+                <td class="px-6 py-4 font-medium">${p.customerUsername}</td>
+                <td class="px-6 py-4">${new Date(p.uploadDate).toLocaleDateString()}</td>
+                <td class="px-6 py-4">
+                    <span class="px-2 py-1 font-semibold text-xs rounded-full ${getStatusClass(p.status)}">
+                        ${p.status}
+                    </span>
+                </td>
+                <td class="px-6 py-4 text-center space-x-2">
+                    <button onclick="updateStatus(${p.id}, 'REVIEWED')" class="px-3 py-1 text-sm bg-green-500 text-white rounded-md hover:bg-green-600">Approve</button>
+                    <button onclick="updateStatus(${p.id}, 'REJECTED')" class="px-3 py-1 text-sm bg-red-500 text-white rounded-md hover:bg-red-600">Reject</button>
+                    <button onclick="updateStatus(${p.id}, 'PENDING')" class="px-3 py-1 text-sm bg-yellow-500 text-white rounded-md hover:bg-yellow-600">Set Pending</button>
+                </td>
+            `;
+      prescriptionsBody.appendChild(row);
+    });
+  }
+
+  async function fetchAllPrescriptions() {
+    try {
+      const response = await fetch('/api/prescriptions/all');
+      if (response.ok) {
+        renderPrescriptions(await response.json());
+      } else {
+        prescriptionsBody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-red-500">Failed to load prescriptions.</td></tr>';
+      }
+    } catch (error) {
+      console.error("Failed to fetch prescriptions:", error);
+      prescriptionsBody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-red-500">An error occurred while loading prescriptions.</td></tr>';
+    }
+  }
+
+  async function updateStatus(id, status) {
+    await fetch(`/api/prescriptions/${id}/status`, {
+      method: 'PUT',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ status: status })
+    });
+    fetchAllPrescriptions();
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    checkAuth();
+    fetchAllPrescriptions();
+  });
+</script>
+</body>
+</html>

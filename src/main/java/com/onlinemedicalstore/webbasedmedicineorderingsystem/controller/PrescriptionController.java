@@ -1,0 +1,87 @@
+package com.onlinemedicalstore.webbasedmedicineorderingsystem.controller;
+
+import com.onlinemedicalstore.webbasedmedicineorderingsystem.dto.PrescriptionDTO;
+import com.onlinemedicalstore.webbasedmedicineorderingsystem.entity.Prescription;
+import com.onlinemedicalstore.webbasedmedicineorderingsystem.entity.PrescriptionStatus;
+import com.onlinemedicalstore.webbasedmedicineorderingsystem.service.PrescriptionService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.security.Principal;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/prescriptions")
+@CrossOrigin(origins = "http://localhost:8080")
+public class PrescriptionController {
+
+    @Autowired
+    private PrescriptionService prescriptionService;
+
+    // --- Customer Endpoints ---
+
+    @PostMapping
+    public ResponseEntity<?> uploadPrescription(@RequestParam("file") MultipartFile file, Principal principal) {
+        try {
+            Prescription prescription = prescriptionService.savePrescription(file, principal.getName());
+            return ResponseEntity.ok(prescription);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @GetMapping("/my")
+    public ResponseEntity<List<Prescription>> getMyPrescriptions(Principal principal) {
+        return ResponseEntity.ok(prescriptionService.getPrescriptionsForUser(principal.getName()));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updatePrescription(@PathVariable Long id, @RequestParam("file") MultipartFile file, Principal principal) {
+        try {
+            Prescription updated = prescriptionService.updatePrescription(id, file, principal.getName());
+            return ResponseEntity.ok(updated);
+        } catch (AccessDeniedException e) {
+            return ResponseEntity.status(403).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deletePrescription(@PathVariable Long id, Principal principal) {
+        try {
+            prescriptionService.deletePrescription(id, principal.getName());
+            return ResponseEntity.ok("Prescription deleted successfully.");
+        } catch (AccessDeniedException e) {
+            return ResponseEntity.status(403).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // --- Admin Endpoints ---
+
+    @GetMapping("/all")
+    @PreAuthorize("hasAnyRole('GENERAL_PHYSICIAN', 'PHARMACY_ASSISTANT', 'SUPER_ADMIN')")
+    public ResponseEntity<List<PrescriptionDTO>> getAllPrescriptions() {
+        return ResponseEntity.ok(prescriptionService.getAllPrescriptionsAsDTO());
+    }
+
+    @PutMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('GENERAL_PHYSICIAN', 'PHARMACY_ASSISTANT', 'SUPER_ADMIN')")
+    public ResponseEntity<?> updateStatus(@PathVariable Long id, @RequestBody Map<String, String> payload) {
+        try {
+            PrescriptionStatus status = PrescriptionStatus.valueOf(payload.get("status"));
+            Prescription updated = prescriptionService.updatePrescriptionStatus(id, status);
+            return ResponseEntity.ok(updated);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Invalid status or prescription ID.");
+        }
+    }
+}
+

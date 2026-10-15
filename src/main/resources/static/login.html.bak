@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - PharmaGo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 flex items-center justify-center min-h-screen">
+
+<div class="w-full max-w-md bg-white p-8 rounded-xl shadow-lg">
+    <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-blue-600">PharmaGo</h1>
+        <p class="text-slate-500">Welcome back! Please login to your account.</p>
+    </div>
+
+    <div id="error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+        Invalid username or password.
+    </div>
+
+    <form id="login-form" action="/login" method="post" class="space-y-6">
+        <div>
+            <label for="username" class="block text-sm font-medium text-slate-600 mb-1">Username</label>
+            <input type="text" id="username" name="username" required class="w-full p-3 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 transition">
+        </div>
+        <div>
+            <label for="password" class="block text-sm font-medium text-slate-600 mb-1">Password</label>
+            <input type="password" id="password" name="password" required class="w-full p-3 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 transition">
+        </div>
+        <div>
+            <button type="submit" class="w-full py-3 bg-blue-600 text-white font-semibold rounded-md hover:bg-blue-700 transition duration-200">Login</button>
+        </div>
+    </form>
+    <p class="text-center text-sm text-slate-500 mt-6">
+        Don't have an account? <a href="/register.html" class="font-medium text-blue-600 hover:underline">Register here</a>.
+    </p>
+</div>
+
+<script>
+    // This script checks the URL for an error parameter from Spring Security and shows the error message.
+    document.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('error')) {
+            document.getElementById('error-message').classList.remove('hidden');
+        }
+    });
+</script>
+</body>
+</html>

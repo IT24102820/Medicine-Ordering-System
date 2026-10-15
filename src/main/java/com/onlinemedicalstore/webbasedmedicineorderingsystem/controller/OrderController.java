@@ -1,0 +1,67 @@
+package com.onlinemedicalstore.webbasedmedicineorderingsystem.controller;
+
+import com.onlinemedicalstore.webbasedmedicineorderingsystem.entity.Order;
+import com.onlinemedicalstore.webbasedmedicineorderingsystem.service.OrderService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.bind.annotation.*;
+import java.security.Principal;
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/orders")
+@CrossOrigin(origins = "http://localhost:8080")
+public class OrderController {
+
+    @Autowired
+    private OrderService orderService;
+
+    @PostMapping
+    public ResponseEntity<?> createOrder(@RequestBody Map<Long, Integer> cartItems, Principal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("User must be logged in to create an order.");
+        }
+        try {
+            Order newOrder = orderService.createOrder(cartItems, principal.getName());
+            return ResponseEntity.ok(newOrder);
+        } catch (IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An unexpected error occurred: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/my-orders")
+    public ResponseEntity<List<Order>> getMyOrders(Principal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        List<Order> orders = orderService.getOrdersForUser(principal.getName());
+        return ResponseEntity.ok(orders);
+    }
+
+    @GetMapping
+    public List<Order> getAllOrders() {
+        return orderService.getAllOrders();
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteOrder(@PathVariable Long id, Principal principal) {
+        if (principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        try {
+            orderService.deleteOrder(id, principal.getName());
+            return ResponseEntity.ok().build();
+        } catch (AccessDeniedException e) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+}
+
+
